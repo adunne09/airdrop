@@ -9,7 +9,10 @@
     "test:contracts": "forge test --contracts contracts"
   },
   "dependencies": {
+    "axios": "^0.26.1",
     "ethers": "^5.6.3",
+    "ipfs-http-client": "^56.0.2",
+    "openpgp": "^5.2.1",
     "vue": "^3.2.25",
     "web3modal-vue": "^1.0.5"
   },
