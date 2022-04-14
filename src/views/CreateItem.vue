@@ -123,25 +123,36 @@
           </div>
         </div>
 
-        <div
-          class="flex gap-x-2"
-          @click="
-            state.formValues.savePublicKeys = !state.formValues.savePublicKeys
-          "
-        >
-          <input
-            type="checkbox"
-            :checked="state.formValues.savePublicKeys"
-            :disabled="state.disabled"
-            class="cursor-pointer"
-          />
-
-          <span
-            class="text-base leading-3 tracking-wide font-bold"
-            :class="[state.disabled ? 'text-gray-300' : 'text-pink-500']"
+        <div class="flex gap-x-2 items-center justify-between">
+          <div
+            class="flex gap-x-2"
+            @click="
+              state.formValues.savePublicKeys = !state.formValues.savePublicKeys
+            "
           >
-            Save Public Keys
-          </span>
+            <input
+              type="checkbox"
+              :checked="state.formValues.savePublicKeys"
+              :disabled="state.disabled"
+              class="cursor-pointer"
+            />
+
+            <span
+              class="text-base leading-3 tracking-wide font-bold"
+              :class="[state.disabled ? 'text-gray-300' : 'text-pink-500']"
+            >
+              Save Public Keys
+            </span>
+
+            <button
+              type="button"
+              class="font-bold rounded p-1 px-2 bg-pink-500 text-white cursor-pointer hover:bg-white border-2 border-pink-500 hover:text-pink-500"
+              @click="handleDownloadKeypair()"
+            >
+              Download Generated Keypair
+            </button>
+            <a ref="downloadKeypairAnchor" class="hidden" />
+          </div>
         </div>
         <!-- add disclaimer re private keys - not connected to funds, only used for encryption, private keys do not leave the browser -->
       </div>
@@ -165,18 +176,17 @@
 
 <script setup lang="ts">
 import { ethers } from 'ethers'
-// import { create as ipfsHttpClient } from 'ipfs-http-client'
 import { computed, ref, Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import * as openpgp from 'openpgp'
 import ProgressBar from '@/components/ProgressBar.vue'
+import detectEthereumProvider from '@metamask/detect-provider'
+import { Buffer } from 'buffer/'
 
 import Airdrop from '../../out/Airdrop.sol/Airdrop.json'
 
 const airdropContractAddress = import.meta.env.VITE_APP_AIRDROP_CONTRACT_ADDRESS
 const ipfsEndpoint = import.meta.env.VITE_APP_IPFS_API_ENDPOINT
-
-// const ipfsClient = ipfsHttpClient({ url: ipfsEndpoint })
 
 const ITEM_DETAILS = 'ITEM_DETAILS'
 const ENCRYPTION_DETAILS = 'ENCRYPTION_DETAILS'
@@ -188,7 +198,7 @@ interface State {
     name: string
     recipient: string
     description: string
-    fileUrl: string
+    file?: File
 
     enableEncryption: boolean
     senderPrivateKey: string
@@ -197,6 +207,10 @@ interface State {
 
     enableNotifications: boolean
   }
+  generatedKeypairData?: openpgp.SerializedKeyPair<string> & {
+    revocationCertificate: string
+  }
+
   formView: string
   readyToSubmit: boolean
 }
@@ -208,7 +222,6 @@ const state: Ref<State> = ref({
     name: '',
     recipient: '',
     description: '',
-    fileUrl: '',
 
     enableEncryption: false,
     senderPrivateKey: '',
@@ -222,7 +235,7 @@ const state: Ref<State> = ref({
     const baseFormValuesAreComplete = Boolean(
       state.value.formValues.name.length &&
         ethers.utils.isAddress(state.value.formValues.recipient) &&
-        state.value.formValues.fileUrl.length
+        state.value.formValues.file
     )
 
     if (state.value.formValues.enableEncryption) {
@@ -239,27 +252,86 @@ const state: Ref<State> = ref({
   }),
 })
 
-const handleSelectFile = async (e: Event) => {
-  state.value.loading = true
+const downloadKeypairAnchor: Ref<HTMLAnchorElement | null> = ref(null)
 
+const uploadFile = async (file: File) => {
   try {
-    const target = e.target as any
-    const file = target.files[0]
+    if (file.size === 0) {
+      throw new Error('Cannot store item of size 0')
+    }
 
-    console.log('file selected')
+    const url = new URL('/api/v0/add?stream-channels=true', ipfsEndpoint) // is the query necessary
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const request = await fetch(url.toString(), {
+      method: 'POST',
+      body: formData,
+    })
+    return await request.json()
   } catch (e) {
-    console.error('failed to select file;', e)
-  } finally {
-    state.value.loading = false
+    console.error('failed to upload file to ipfs;', e)
   }
+}
+
+const fileToBase64 = (file: any) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = (error) => reject(error)
+  })
+
+const handleDownloadKeypair = async () => {
+  if (!state.value.generatedKeypairData || !downloadKeypairAnchor.value) {
+    return
+  }
+
+  const keyDataString = Object.values(state.value.generatedKeypairData).join(
+    '\n\n'
+  )
+
+  const buffer = Buffer.from(keyDataString)
+  const base64 = buffer.toString('base64')
+
+  downloadKeypairAnchor.value.href =
+    'data:application/octet-stream;base64,' + base64
+
+  downloadKeypairAnchor.value.download = 'key.txt'
+  downloadKeypairAnchor.value.click()
+}
+
+const handleSelectFile = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file: File = (target.files as FileList)[0]
+  state.value.formValues.file = file
 }
 
 const handleGenerateKeypair = async () => {
   state.value.loading = true
 
-  setTimeout(() => {
+  try {
+    const connection = (await detectEthereumProvider()) as any
+    const provider = new ethers.providers.Web3Provider(connection)
+
+    const signer = provider.getSigner()
+    const address = await signer.getAddress()
+
+    const keyData = await openpgp.generateKey({
+      type: 'ecc',
+      curve: 'curve25519',
+      userIDs: [{ name: address }], // TODO-- add key name input
+      passphrase: 'super long and hard to guess secret', // TODO-- add passphrase input
+      format: 'armored',
+    })
+
+    state.value.generatedKeypairData = keyData
+    state.value.formValues.senderPrivateKey = keyData.privateKey
+  } catch (e) {
+    console.error('failed to generate keypair;', e)
+  } finally {
     state.value.loading = false
-  }, 5000)
+  }
 }
 
 const handleSubmit = async () => {}

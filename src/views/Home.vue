@@ -26,6 +26,7 @@ onMounted(async () => {
   try {
     const connection = (await detectEthereumProvider()) as any
     const provider = new ethers.providers.Web3Provider(connection)
+    // FIXME-- this breaks if the user has to input their metamask password
 
     const signer = provider.getSigner()
 
