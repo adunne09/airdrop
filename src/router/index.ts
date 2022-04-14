@@ -3,7 +3,7 @@ import { RouteRecordRaw, createRouter, createWebHistory } from 'vue-router'
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    name: 'Home',
+    name: 'home',
     component: () => import('../views/Home.vue'),
     meta: {
       title: 'Home',
@@ -11,15 +11,16 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/create-item',
-    name: 'Create Item',
+    name: 'create-item',
     component: () => import('../views/CreateItem.vue'),
+
     meta: {
       title: 'Create Item',
     },
   },
   {
     path: '/unclaimed-items',
-    name: 'Unclaimed Items',
+    name: 'unclaimed-items',
     component: () => import('../views/UnclaimedItems.vue'),
     meta: {
       title: 'Unclaimed Items',
@@ -27,7 +28,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/created-items',
-    name: 'Created Items',
+    name: 'created-items',
     component: () => import('../views/CreatedItems.vue'),
     meta: {
       title: 'Created Items',
