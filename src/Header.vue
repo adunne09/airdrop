@@ -7,9 +7,9 @@
       <div class="flex mt-4 items-center border-2 border-pink-500 rounded-lg">
         <HeaderLink to="/create-item" title="Create Item" />
         <div class="border-x-2 border-pink-500">
-          <HeaderLink to="/unclaimed-items" title="View Unclaimed Items" />
+          <HeaderLink to="/unclaimed-items" title="Unclaimed Items" />
         </div>
-        <HeaderLink to="/created-items" title="View Created Items" />
+        <HeaderLink to="/created-items" title="Created Items" />
       </div>
     </div>
   </header>
