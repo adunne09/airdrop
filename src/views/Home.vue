@@ -7,7 +7,9 @@ import Airdrop from '../../out/Airdrop.sol/Airdrop.json'
 import detectEthereumProvider from '@metamask/detect-provider'
 import ProgressBar from '@/components/ProgressBar.vue'
 
-const airdropContractAddress = import.meta.env.VITE_APP_AIRDROP_CONTRACT_ADDRESS
+const AIRDROP_CONTRACT_ADDRESS = import.meta.env
+  .VITE_APP_AIRDROP_CONTRACT_ADDRESS
+const CHAIN_ID = +import.meta.env.VITE_APP_POLYGON_MUMBAI_TESTNET_CHAIN_ID // parse to int
 
 interface State {
   loading: boolean
@@ -24,14 +26,32 @@ onMounted(async () => {
   state.value.loading = true
 
   try {
+    // establish initial eth connection
     const connection = (await detectEthereumProvider()) as any
-    const provider = new ethers.providers.Web3Provider(connection)
-    // FIXME-- this breaks if the user has to input their metamask password
+    if (!connection || connection !== window.ethereum) {
+      throw new Error('Please install Metamask')
+    }
 
-    const signer = provider.getSigner()
+    const ethereum = window.ethereum as any
+
+    // trigger the metamask popup if the user needs to authorize connection
+    const [address] = await ethereum.request({ method: 'eth_requestAccounts' })
+    if (!address) {
+      throw new Error('Please authorize an account to connect with')
+    }
+
+    // assert that the user is on the correct chain id
+    const chainIdHex = await ethereum.request({ method: 'eth_chainId' })
+    const chainId = ethers.BigNumber.from(chainIdHex).toNumber()
+    if (chainId !== CHAIN_ID) {
+      throw new Error('Please select the correct network')
+    }
+
+    const provider = new ethers.providers.Web3Provider(connection)
+    const signer = provider.getSigner(address)
 
     const airdropContract = new ethers.Contract(
-      airdropContractAddress!,
+      AIRDROP_CONTRACT_ADDRESS,
       Airdrop.abi,
       signer
     )
