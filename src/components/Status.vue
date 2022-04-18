@@ -9,9 +9,9 @@
         :class="[
           'w-1.5 h-1.5 rounded-full',
           { 'bg-gray-300': status === 'default' },
-          { 'bg-success shadow-success-3': status === 'success' },
-          { 'bg-warning shadow-warning-3': status === 'pending' },
-          { 'bg-error shadow-warning-3': status === 'failure' },
+          { 'bg-green-600 shadow-success-3': status === 'success' },
+          { 'bg-yellow-500 shadow-warning-3': status === 'pending' },
+          { 'bg-red-500 shadow-warning-3': status === 'failure' },
         ]"
       />
     </div>
@@ -26,21 +26,6 @@ defineProps<{ status: 'success' | 'pending' | 'failure' }>()
 </script>
 
 <style scoped>
-.bg-success {
-  --tw-bg-opacity: 1;
-  background-color: rgba(101, 175, 106, var(--tw-bg-opacity));
-}
-
-.bg-warning {
-  --tw-bg-opacity: 1;
-  background-color: rgba(248, 206, 86, var(--tw-bg-opacity));
-}
-
-.bg-warning {
-  --tw-bg-opacity: 1;
-  background-color: rgba(248, 206, 86, var(--tw-bg-opacity));
-}
-
 .warning-animation-bg {
   background-color: #fce7ab;
 }
