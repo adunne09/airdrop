@@ -37,7 +37,7 @@ contract NFTMarketTest is DSTest, Airdrop {
         
         airdrop.createToken("example uri", address(3));
 
-        AirdropItem[] memory items = airdrop.fetchSentItems();
+        AirdropItem[] memory items = airdrop.fetchItems();
         assertEq(items.length, 1, "Items not found");
         
         address airdropItemSender = items[0].sender;
@@ -50,17 +50,12 @@ contract NFTMarketTest is DSTest, Airdrop {
         assert(!claimed);
     }
 
-    function testFetchSentItemsWithNoItems() public {
-        AirdropItem[] memory items = airdrop.fetchSentItems();
-        assertEq(items.length, 0, "Found items");
-    }
-
     function testFetchReceivedItems() public {
         vm.prank(address(4));
         airdrop.createToken("example uri", address(5));
 
         vm.prank(address(5));
-        AirdropItem[] memory items = airdrop.fetchReceivedItems();
+        AirdropItem[] memory items = airdrop.fetchItems();
         assertEq(items.length, 1, "Items not found");
 
         address airdropItemSender = items[0].sender;
@@ -73,8 +68,8 @@ contract NFTMarketTest is DSTest, Airdrop {
         assert(!claimed);
     }
 
-    function testFetchReceivedItemsWithNoItems() public {
-        AirdropItem[] memory items = airdrop.fetchReceivedItems();
+    function testFetchItemsWithNoItems() public {
+        AirdropItem[] memory items = airdrop.fetchItems();
         assertEq(items.length, 0, "Found items");
     }
 

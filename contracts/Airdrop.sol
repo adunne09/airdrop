@@ -64,56 +64,30 @@ contract Airdrop is ERC721URIStorage {
         return newTokenId;
     }
 
-    function fetchSentItems() external view returns (AirdropItem[] memory) {
+    function fetchItems() external view returns (AirdropItem[] memory) {
         uint itemCount = _tokenIds.current();
-        uint senderItemCount = 0;
+        uint totalItemCount = 0;
 
         for (uint i = 0; i < itemCount; i++) {
-            if (tokenIdToAirdropItem[i + 1].sender == msg.sender) {
-                senderItemCount++;
+            if (tokenIdToAirdropItem[i + 1].sender == msg.sender || tokenIdToAirdropItem[i + 1].recipient == msg.sender) {
+                totalItemCount++;
             }
         }
 
-        if (senderItemCount == 0) {
+        if (totalItemCount == 0) {
             return new AirdropItem[](0);
         }
         
-        AirdropItem[] memory senderItems = new AirdropItem[](senderItemCount);
+        AirdropItem[] memory items = new AirdropItem[](totalItemCount);
         uint currentIndex = 0;
 
         for (uint i = 0; i < itemCount; i++) {
-            if (tokenIdToAirdropItem[i + 1].sender == msg.sender) {
-                senderItems[currentIndex++] = tokenIdToAirdropItem[i + 1];
+            if (tokenIdToAirdropItem[i + 1].sender == msg.sender || tokenIdToAirdropItem[i + 1].recipient == msg.sender) {
+                items[currentIndex++] = tokenIdToAirdropItem[i + 1];
             }
         }
 
-        return senderItems;
-    }
-
-    function fetchReceivedItems() external view returns (AirdropItem[] memory) {
-        uint itemCount = _tokenIds.current();
-        uint recipientItemCount = 0;
-
-        for (uint i = 0; i < itemCount; i++) {
-            if (tokenIdToAirdropItem[i + 1].recipient == msg.sender) {
-                recipientItemCount++;
-            }
-        }
-
-        if (recipientItemCount == 0) {
-            return new AirdropItem[](0);
-        }
-        
-        AirdropItem[] memory recipientItems = new AirdropItem[](recipientItemCount);
-        uint currentIndex = 0;
-
-        for (uint i = 0; i < itemCount; i++) {
-            if (tokenIdToAirdropItem[i + 1].recipient == msg.sender) {
-                recipientItems[currentIndex++] = tokenIdToAirdropItem[i + 1];
-            }
-        }
-
-        return recipientItems;
+        return items;
     }
 
     // should this exist or should the claimItem function simply return the newly claimed item
