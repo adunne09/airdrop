@@ -1,6 +1,6 @@
 <template>
-  <div class="flex justify-center gap-4">
-    <form @submit.prevent="">
+  <div class="flex justify-center gap-4 mb-4">
+    <form @submit.prevent="handleSubmit">
       <div v-if="state.formView === ITEM_DETAILS" class="grid gap-4">
         <input
           v-model="state.formValues.name"
@@ -31,7 +31,7 @@
         />
         <div
           :class="[
-            'flex gap-x-2 items-center justify-between',
+            'flex gap-x-2 items-center justify-between h-6',
             state.disabled ? 'cursor-not-allowed' : 'cursor-pointer',
           ]"
         >
@@ -61,7 +61,7 @@
             v-if="state.formValues.enableEncryption"
             type="button"
             @click="state.formView = ENCRYPTION_DETAILS"
-            class="font-bold rounded px-2 text-pink-500 cursor-pointer"
+            class="font-bold text-pink-500 cursor-pointer"
           >
             Next
           </button>
@@ -72,7 +72,7 @@
         class="grid gap-4"
         style="width: 600px"
       >
-        <div class="flex gap-4 w-full">
+        <div class="flex justify-between gap-4 w-full">
           <button
             type="button"
             @click="state.formView = ITEM_DETAILS"
@@ -82,17 +82,13 @@
           </button>
           <button
             type="button"
-            class="w-full font-bold rounded p-1 px-2 bg-pink-500 text-white cursor-pointer hover:bg-white border-2 border-pink-500 hover:text-pink-500"
+            :disabled="Boolean(state.generatedKeypairData)"
+            class="font-bold rounded p-1 px-2 bg-pink-500 text-white cursor-pointer hover:bg-white border-2 border-pink-500 hover:text-pink-500"
             @click="handleGenerateKeypair()"
           >
             Generate Keypair
           </button>
-          <button
-            type="button"
-            class="w-full font-bold rounded p-1 px-2 text-pink-500 cursor-pointer hover:bg-pink-500 border-2 border-pink-500 hover:text-white"
-          >
-            Enter keypair
-          </button>
+
           <!-- add upload keyfile functionality -->
         </div>
 
@@ -125,12 +121,12 @@
 
         <div class="flex gap-x-2 items-center justify-between">
           <div
-            class="flex gap-x-2"
+            class="flex gap-x-2 items-center"
             @click="
               state.formValues.savePublicKeys = !state.formValues.savePublicKeys
             "
           >
-            <input
+            <!-- <input
               type="checkbox"
               :checked="state.formValues.savePublicKeys"
               :disabled="state.disabled"
@@ -141,18 +137,18 @@
               class="text-base leading-3 tracking-wide font-bold"
               :class="[state.disabled ? 'text-gray-300' : 'text-pink-500']"
             >
-              Save Public Keys
-            </span>
-
-            <button
-              type="button"
-              class="font-bold rounded p-1 px-2 bg-pink-500 text-white cursor-pointer hover:bg-white border-2 border-pink-500 hover:text-pink-500"
-              @click="handleDownloadKeypair()"
-            >
-              Download Generated Keypair
-            </button>
-            <a ref="downloadKeypairAnchor" class="hidden" />
+              Save Public Keys to the cloud
+            </span> -->
           </div>
+          <button
+            v-if="Boolean(state.generatedKeypairData)"
+            type="button"
+            class="font-bold rounded p-1 px-2 bg-pink-500 text-white cursor-pointer hover:bg-white border-2 border-pink-500 hover:text-pink-500"
+            @click="handleDownloadKeypair()"
+          >
+            Download Generated Keypair
+          </button>
+          <a ref="downloadKeypairAnchor" class="hidden" />
         </div>
         <!-- add disclaimer re private keys - not connected to funds, only used for encryption, private keys do not leave the browser -->
       </div>
@@ -185,8 +181,10 @@ import { Buffer } from 'buffer/'
 
 import Airdrop from '../../out/Airdrop.sol/Airdrop.json'
 
-const airdropContractAddress = import.meta.env.VITE_APP_AIRDROP_CONTRACT_ADDRESS
-const ipfsEndpoint = import.meta.env.VITE_APP_IPFS_API_ENDPOINT
+const AIRDROP_CONTRACT_ADDRESS = import.meta.env
+  .VITE_APP_AIRDROP_CONTRACT_ADDRESS
+const IPFS_ENDPOINT = import.meta.env.VITE_APP_IPFS_BASE_URL
+const CHAIN_ID = +import.meta.env.VITE_APP_POLYGON_MUMBAI_TESTNET_CHAIN_ID // parse to int
 
 const ITEM_DETAILS = 'ITEM_DETAILS'
 const ENCRYPTION_DETAILS = 'ENCRYPTION_DETAILS'
@@ -254,15 +252,19 @@ const state: Ref<State> = ref({
 
 const downloadKeypairAnchor: Ref<HTMLAnchorElement | null> = ref(null)
 
-const uploadFile = async (file: File) => {
-  try {
-    if (file.size === 0) {
-      throw new Error('Cannot store item of size 0')
-    }
+const router = useRouter()
 
-    const url = new URL('/api/v0/add?stream-channels=true', ipfsEndpoint) // is the query necessary
+const uploadFile = async (content: string, metadata: Object) => {
+  try {
+    const url = new URL('/api/v0/add?stream-channels=true', IPFS_ENDPOINT) // is the query necessary
     const formData = new FormData()
-    formData.append('file', file)
+
+    // specify file ext in metadata?
+    const data = {
+      file: content,
+      ...metadata,
+    }
+    formData.append('file', JSON.stringify(data))
 
     const request = await fetch(url.toString(), {
       method: 'POST',
@@ -274,7 +276,7 @@ const uploadFile = async (file: File) => {
   }
 }
 
-const fileToBase64 = (file: any) =>
+const fileToBase64 = async (file: any) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.readAsDataURL(file)
@@ -320,7 +322,7 @@ const handleGenerateKeypair = async () => {
     const keyData = await openpgp.generateKey({
       type: 'ecc',
       curve: 'curve25519',
-      userIDs: [{ name: address }], // TODO-- add key name input
+      userIDs: [{ name: address }], // TODO-- add key name input -> profile stored in url will have address, key username and public key -> sign username / key with eth account?
       passphrase: 'super long and hard to guess secret', // TODO-- add passphrase input
       format: 'armored',
     })
@@ -334,7 +336,92 @@ const handleGenerateKeypair = async () => {
   }
 }
 
-const handleSubmit = async () => {}
+const handleSubmit = async () => {
+  state.value.loading = true
+
+  // TODO-- add text above loader indicating what is happening
+  try {
+    // convert file to base64
+    const base64File = (await fileToBase64(
+      state.value.formValues.file
+    )) as string
+
+    // format encryption items for openpgp
+    const message = await openpgp.createMessage({ text: base64File })
+    const publicKey = await openpgp.readKey({
+      armoredKey: state.value.formValues.recipientPublicKey,
+    })
+    const privateKey = await openpgp.decryptKey({
+      privateKey: await openpgp.readPrivateKey({
+        armoredKey: state.value.formValues.senderPrivateKey,
+      }),
+      passphrase: 'super long and hard to guess secret', // FIXME--
+    })
+
+    // encrypt with keypair
+    const encryptedBase64File = (await openpgp.encrypt({
+      message,
+      encryptionKeys: publicKey,
+      signingKeys: privateKey, // optional
+    })) as any
+
+    // upload to ipfs with metadata
+    const uploadedFile = await uploadFile(encryptedBase64File, {
+      name: state.value.formValues.name,
+      description: state.value.formValues.description,
+    })
+
+    // really you only have to created the token with the hash
+    // setting the tokenURI as the full url would break the app if infura went down
+    const uploadedFileUrl = `https://ipfs.infura.io/ipfs/${uploadedFile.Hash}`
+
+    // establish initial eth connection
+    const connection = (await detectEthereumProvider()) as any
+    if (!connection || connection !== window.ethereum) {
+      throw new Error('Please install Metamask')
+    }
+
+    const ethereum = window.ethereum as any
+
+    // trigger the metamask popup if the user needs to authorize connection
+    const [address] = await ethereum.request({ method: 'eth_requestAccounts' })
+    if (!address) {
+      throw new Error('Please authorize an account to connect with')
+    }
+
+    // assert that the user is on the correct chain id
+    const chainIdHex = await ethereum.request({ method: 'eth_chainId' })
+    const chainId = ethers.BigNumber.from(chainIdHex).toNumber()
+    if (chainId !== CHAIN_ID) {
+      throw new Error('Please select the correct network')
+    }
+
+    const provider = new ethers.providers.Web3Provider(connection)
+    const signer = provider.getSigner(address)
+
+    const airdropContract = new ethers.Contract(
+      AIRDROP_CONTRACT_ADDRESS,
+      Airdrop.abi,
+      signer
+    )
+
+    // call create token method
+    const transaction = await airdropContract.createToken(
+      uploadedFileUrl,
+      state.value.formValues.recipient
+    )
+    await transaction.wait()
+
+    // TODO-- show success popup
+
+    // redirect to home
+    router.replace('/')
+  } catch (e) {
+    state.value.loading = false
+
+    console.error('failed to create token', e)
+  }
+}
 </script>
 
 <style scoped></style>
