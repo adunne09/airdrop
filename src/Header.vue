@@ -5,8 +5,11 @@
       <router-link to="/" class="text-4xl font-bold hover:text-pink-500">
         Airdrop Bazaar
       </router-link>
+      <div class="flex justify-center">
+        <Status :status="state.status">{{ state.address }}</Status>
+      </div>
       <div
-        class="flex justify-around mt-4 items-center border-2 border-pink-500 rounded-lg"
+        class="flex justify-around m2-4 items-center border-2 border-pink-500 rounded-lg"
       >
         <HeaderLink to="/create-item" title="Create Item" />
         <div class="border-l border-pink-500 h-4 w-1" />
@@ -21,6 +24,41 @@
 
 <script setup lang="ts">
 import HeaderLink from '@/components/HeaderLink.vue'
+import Status from '@/components/Status.vue'
+import { onMounted } from '@vue/runtime-core'
+import { ref, Ref } from 'vue'
+import { establishConnectionAndGetAirdropContract } from '@/utils'
+
+interface State {
+  status: string
+  address?: string
+}
+
+const state: Ref<State> = ref({
+  status: 'pending',
+})
+
+onMounted(async () => {
+  try {
+    const { address } = await establishConnectionAndGetAirdropContract()
+
+    const ethereum = window.ethereum as any
+    ethereum.on('accountsChanged', (accounts: string[]) => {
+      if (!accounts.length) {
+        throw new Error('must select an account')
+      }
+
+      state.value.address = accounts[0]
+    })
+
+    state.value.address = address
+    state.value.status = 'success'
+  } catch (e) {
+    state.value.status = 'error'
+
+    console.error('failed to establish ethereum connection;', e)
+  }
+})
 </script>
 
 <style scoped></style>
