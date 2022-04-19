@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ status: 'success' | 'pending' | 'failure' }>()
+defineProps<{ status: 'default' | 'success' | 'pending' | 'failure' }>()
 </script>
 
 <style scoped>
