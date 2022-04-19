@@ -37,7 +37,7 @@
           <a
             v-else-if="item.role === 'recipient' && item.claimed"
             class="w-full text-green-600 bg-white font-bold py-2 px-12 rounded hover:bg-green-600 hover:text-white"
-            @click="handleDownloadItem(item.file)"
+            @click="state.selectedItemId = item.tokenId"
           >
             Download
           </a>
@@ -45,16 +45,80 @@
       </div>
     </div>
   </div>
+  <Modal v-if="state.selectedItemId" @close="state.selectedItemId = null">
+    <div style="width: 500px">
+      <h2 class="flex flex-start font-bold pb-2">Decrypt file</h2>
+      <form @submit.prevent="handleDownloadItem(state.selectedItemId)">
+        <ProgressBar
+          v-if="state.loading"
+          :loading="state.loading"
+          class="absolute top-60 w-4/5"
+        />
+
+        <div :class="['grid gap-4 w-full', { 'opacity-30': state.loading }]">
+          <textarea
+            v-model="state.formValues.recipientPrivateKey"
+            name="private-key"
+            placeholder="Your private key"
+            class="border-2 border-pink-500 rounded p-1 resize-none"
+            style="height: 300px"
+          />
+          <textarea
+            v-model="state.formValues.senderPublicKey"
+            name="public-key"
+            placeholder="The sender's public key"
+            class="border-2 border-pink-500 rounded p-1 resize-none"
+            style="height: 300px"
+          />
+        </div>
+
+        <div class="flex justify-between pt-4">
+          <button
+            type="button"
+            class="font-bold rounded p-1 px-2 bg-pink-500 text-white cursor-pointer hover:bg-white border-2 border-pink-500 hover:text-pink-500"
+            @click=""
+          >
+            Upload Key
+          </button>
+
+          <div class="flex gap-4">
+            <button
+              type="button"
+              @click="state.selectedItemId = null"
+              class="font-bold text-pink-500 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              :disabled="!state.encryptedDownloadIsReady"
+              :class="[
+                'rounded px-2',
+                state.encryptedDownloadIsReady
+                  ? 'bg-pink-500 text-white cursor-pointer hover:bg-white hover:border-2 hover:border-pink-500 hover:text-pink-500'
+                  : 'border-2 border-gray-400 text-gray-400 cursor-not-allowed',
+              ]"
+            >
+              Decrypt & Download
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </Modal>
+  <a ref="downloadItemAnchor" class="hidden" />
 </template>
 
 <script setup lang="ts">
-import { onMounted } from '@vue/runtime-core'
+import { onMounted, computed } from '@vue/runtime-core'
 import { ref, Ref } from 'vue'
 import { BigNumber, ethers } from 'ethers'
 import axios from 'axios'
 import Airdrop from '../../out/Airdrop.sol/Airdrop.json'
 import detectEthereumProvider from '@metamask/detect-provider'
 import ProgressBar from '@/components/ProgressBar.vue'
+import Modal from '@/components/Modal.vue'
+import * as openpgp from 'openpgp'
 
 const AIRDROP_CONTRACT_ADDRESS = import.meta.env
   .VITE_APP_AIRDROP_CONTRACT_ADDRESS
@@ -71,23 +135,46 @@ interface Item {
   tokenId: number
   sender: string
   recipient: string
-  claimed: boolean
   name: string
   description: string
   file: string
+  claimed: boolean
   role: 'sender' | 'recipient'
+  isEncrypted: boolean
+  fileExtension: string
 }
 
 interface State {
   loading: boolean
   signer?: ethers.providers.JsonRpcSigner
   items: Item[]
+
+  selectedItemId: number | null
+  formValues: {
+    recipientPrivateKey: string
+    senderPublicKey: string
+  }
+  encryptedDownloadIsReady: boolean
 }
 
 const state: Ref<State> = ref({
   loading: false,
   items: [],
+
+  selectedItemId: null,
+  formValues: {
+    recipientPrivateKey: '',
+    senderPublicKey: '',
+  },
+  encryptedDownloadIsReady: computed(() =>
+    Boolean(
+      state.value.formValues.recipientPrivateKey?.length &&
+        state.value.formValues.senderPublicKey?.length
+    )
+  ),
 })
+
+const downloadItemAnchor: Ref<HTMLAnchorElement | null> = ref(null)
 
 onMounted(async () => {
   state.value.loading = true
@@ -126,18 +213,19 @@ onMounted(async () => {
     const data = await airdropContract.fetchItems()
 
     const items: Item[] = await Promise.all(
-      data.map(async (i: AirdropBlockchainItem) => {
-        const tokenUri = await airdropContract.tokenURI(i.tokenId)
+      data.map(async (item: AirdropBlockchainItem) => {
+        const tokenUri = await airdropContract.tokenURI(item.tokenId)
         const meta = await axios.get(tokenUri)
 
         return {
-          tokenId: i.tokenId.toNumber(),
-          sender: i.sender,
-          recipient: i.recipient,
+          ...item,
+          tokenId: item.tokenId.toNumber(),
           name: meta.data.name,
           description: meta.data.description,
           file: meta.data.file,
-          role: i.sender === address ? 'sender' : 'recipient',
+          role: item.sender === address ? 'sender' : 'recipient',
+          isEncrypted: meta.data.isEncrypted, // TODO
+          // fileExtension: meta.data.fileExtension, // TODO
         }
       })
     )
@@ -151,8 +239,47 @@ onMounted(async () => {
 })
 
 // TODO-- add encrpytion status to ipfs metadata (isEncrypted: boolean)
-const handleDownloadItem = async (fileStr: string) => {
-  // decrypt file string
+const handleDownloadItem = async (id: number) => {
+  try {
+    const item = state.value.items.find(({ tokenId }) => tokenId === id)!
+
+    let base64String = item.file
+    if (item.isEncrypted) {
+      const message = await openpgp.readMessage({
+        armoredMessage: base64String,
+      })
+
+      const publicKey = await openpgp.readKey({
+        armoredKey: state.value.formValues.senderPublicKey,
+      })
+      const privateKey = await openpgp.decryptKey({
+        privateKey: await openpgp.readPrivateKey({
+          armoredKey: state.value.formValues.recipientPrivateKey,
+        }),
+        passphrase: 'super long and hard to guess secret', // FIXME--
+      })
+
+      const { data, signatures } = await openpgp.decrypt({
+        message,
+        verificationKeys: publicKey,
+        decryptionKeys: privateKey,
+      })
+
+      const isValidSignature = await signatures[0].verified
+      console.log(isValidSignature)
+
+      base64String = data as string
+      // TODO-- set the item file as this string and isEncrypted: false
+      // if they cancel, they don't have to put in the keys again
+    }
+
+    downloadItemAnchor.value!.href = base64String
+
+    downloadItemAnchor.value!.download = `${item.name}.jpeg` // .{itme.fileExtension}
+    downloadItemAnchor.value!.click()
+  } catch (e) {
+    console.log('failed to download item;', e)
+  }
 }
 
 const handleClaimItem = async (id: number) => {
