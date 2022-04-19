@@ -52,3 +52,10 @@ export const establishConnectionAndGetAirdropContract = async (): Promise<
     return { message: e }
   }
 }
+
+export const registerAccountChangeHandler = (
+  handler: (accounts: string[]) => void
+): void => {
+  const ethereum = window.ethereum as any
+  ethereum.on('accountsChanged', (accounts: string[]) => handler(accounts))
+}
