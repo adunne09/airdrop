@@ -27,7 +27,10 @@ import HeaderLink from '@/components/HeaderLink.vue'
 import Status from '@/components/Status.vue'
 import { onMounted } from '@vue/runtime-core'
 import { ref, Ref } from 'vue'
-import { establishConnectionAndGetAirdropContract } from '@/utils'
+import {
+  establishConnectionAndGetAirdropContract,
+  registerAccountChangeHandler,
+} from '@/utils'
 
 interface State {
   status: string
@@ -38,18 +41,17 @@ const state: Ref<State> = ref({
   status: 'pending',
 })
 
+registerAccountChangeHandler((accounts: string[]) => {
+  if (!accounts.length) {
+    throw new Error('must select an account')
+  }
+
+  state.value.address = accounts[0]
+})
+
 onMounted(async () => {
   try {
     const { address } = await establishConnectionAndGetAirdropContract()
-
-    const ethereum = window.ethereum as any
-    ethereum.on('accountsChanged', (accounts: string[]) => {
-      if (!accounts.length) {
-        throw new Error('must select an account')
-      }
-
-      state.value.address = accounts[0]
-    })
 
     state.value.address = address
     state.value.status = 'success'
