@@ -9,9 +9,9 @@
         class="flex justify-around mt-4 items-center border-2 border-pink-500 rounded-lg"
       >
         <HeaderLink to="/create-item" title="Create Item" />
-        <div class="border-x-2 border-pink-500 px-4">
-          <HeaderLink to="/unclaimed-items" title="Unclaimed Items" />
-        </div>
+        <div class="border-l border-pink-500 h-4 w-1" />
+        <HeaderLink to="/unclaimed-items" title="Unclaimed Items" />
+        <div class="border-r border-pink-500 h-4 w-1" />
         <HeaderLink to="/created-items" title="Created Items" />
       </div>
     </div>
