@@ -55,11 +55,13 @@
           v-model="state.encryptionValues.senderNewKeyName"
           name="key-name"
           placeholder="Key Name"
+          autofocus
         />
         <Input
           v-model="state.encryptionValues.senderPrivateKeyPassphrase"
           name="key-passphrase"
           placeholder="Passphrase"
+          type="password"
         />
         <a ref="downloadKeyfileAnchor" class="hidden" />
         <Button
