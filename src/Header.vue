@@ -2,9 +2,12 @@
   <header class="w-full flex justify-center my-8">
     <div class="flex-1 mb-7 border-b-2 border-pink-500" />
     <div class="flex-1">
-      <router-link to="/" class="text-4xl font-bold hover:text-pink-500">
-        Airdrop Bazaar
-      </router-link>
+      <div class="flex justify-center items-center gap-4">
+        <PolygonIcon />
+        <router-link to="/" class="text-4xl font-bold hover:text-pink-500">
+          Airdrop Bazaar
+        </router-link>
+      </div>
       <div class="flex justify-center">
         <Status :status="state.status">{{ state.address }}</Status>
       </div>
@@ -16,8 +19,6 @@
         <HeaderLink to="/create-item" title="Create Item" />
         <div class="border border-pink-500 h-4" />
         <HeaderLink to="/unclaimed-items" title="Unclaimed Items" />
-        <!-- <div class="border-r border-pink-500 h-4 w-1" />
-        <HeaderLink to="/created-items" title="Created Items" /> -->
       </div>
     </div>
     <div class="flex-1 mb-7 border-b-2 border-pink-500" />
@@ -30,6 +31,7 @@ import Status from '@/components/Status.vue'
 import { onMounted } from '@vue/runtime-core'
 import { ref, Ref } from 'vue'
 import { ethUtils } from './utils'
+import PolygonIcon from '@/assets/polygon-logo.svg?component'
 
 interface State {
   status: string
