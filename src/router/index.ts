@@ -12,7 +12,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/create-item',
     name: 'create-item',
-    component: () => import('../views/CreateItem.vue'),
+    component: () => import('../views/create-item/CreateItem.vue'),
 
     meta: {
       title: 'Create Item',
@@ -24,14 +24,6 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/UnclaimedItems.vue'),
     meta: {
       title: 'Unclaimed Items',
-    },
-  },
-  {
-    path: '/created-items',
-    name: 'created-items',
-    component: () => import('../views/CreatedItems.vue'),
-    meta: {
-      title: 'Created Items',
     },
   },
 ]
