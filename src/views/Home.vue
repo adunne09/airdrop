@@ -27,15 +27,16 @@
         </div>
         <div class="flex p-4 bg-black">
           <Button
-            kind="primary"
             v-if="!item.claimed"
+            kind="primary"
             @click="handleClaimItem(item.tokenId)"
+            :loading="item.loading"
           >
             Unclaimed
           </Button>
           <Button
-            kind="primary"
             v-else-if="item.claimed"
+            kind="primary"
             @click="handleDownloadItem(item)"
           >
             Download
@@ -115,6 +116,7 @@ interface Item {
   claimed: boolean
   role: 'sender' | 'recipient'
   senderPublicKey?: openpgp.Key
+  loading?: boolean
 }
 
 interface State {
@@ -269,7 +271,14 @@ const handleDownloadEncryptedItem = async () => {
 }
 
 const handleClaimItem = async (id: number) => {
-  state.value.loading = true
+  const item = state.value.items.find(({ tokenId }) => tokenId === id)
+
+  if (!item) {
+    console.error('failed to find item')
+    return
+  }
+
+  item.loading = true
 
   try {
     const { contract: airdropContract } =
@@ -278,18 +287,11 @@ const handleClaimItem = async (id: number) => {
     const transaction = await airdropContract.claimItem(id)
     await transaction.wait()
 
-    const itemIndex = state.value.items
-      .map(({ tokenId }) => tokenId)
-      .indexOf(id)
-
-    state.value.items.splice(itemIndex, 1, {
-      ...state.value.items[itemIndex],
-      claimed: true,
-    })
+    item.claimed = true
   } catch (e) {
     console.error('failed to claim item;', e)
   } finally {
-    state.value.loading = false
+    item.loading = false
   }
 }
 </script>
