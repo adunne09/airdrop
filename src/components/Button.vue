@@ -17,7 +17,7 @@
       { 'border-2 text-gray-400 cursor-not-allowed': disabled },
     ]"
   >
-    <LoaderIcon v-if="loading" class="animate-spin h-5 w-5 text-pink-500" />
+    <LoaderIcon v-if="loading" class="animate-spin h-5 w-5 text-purple-600" />
     <slot v-else />
   </button>
 </template>
