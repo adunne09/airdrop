@@ -1,23 +1,22 @@
 <template>
-  <div
-    aria-label="progress bar"
-    role="presentation"
-    class="flex items-center justify-between"
-  >
-    <div ref="progressBar" class="w-full">
-      <span
-        aria-label="progress indicator"
-        role="presentation"
-        v-for="i in state.barCount"
-        :class="[
-          'progress-indicator inline-block last:mr-0 border border-pink-500 rounded-sm',
-          { 'bg-pink-500': barIsComplete(i) },
-        ]"
-        :key="`indicator-${i}`"
-      />
-    </div>
-    <div class="flex-shrink-0">
-      <slot />
+  <div aria-label="progress bar" role="presentation">
+    {{ text }}
+    <div class="flex items-center justify-between">
+      <div ref="progressBar" class="w-full">
+        <span
+          aria-label="progress indicator"
+          role="presentation"
+          v-for="i in state.barCount"
+          :class="[
+            'progress-indicator inline-block last:mr-0 border border-pink-500 rounded-sm',
+            { 'bg-pink-500': barIsComplete(i) },
+          ]"
+          :key="`indicator-${i}`"
+        />
+      </div>
+      <div class="flex-shrink-0">
+        <slot />
+      </div>
     </div>
   </div>
 </template>
@@ -29,7 +28,8 @@ import { onMounted, onUnmounted, watch } from '@vue/runtime-core'
 const props = withDefaults(
   defineProps<{
     percentage?: number | string
-    loading: boolean
+    loading?: boolean
+    text?: string
   }>(),
   {
     percentage: 0,

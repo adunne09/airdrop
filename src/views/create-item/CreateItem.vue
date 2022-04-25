@@ -1,28 +1,33 @@
 <template>
   <div class="flex justify-center gap-4 mb-4">
     <form @submit.prevent="handleSubmit">
-      <div class="grid gap-4" style="width: 500px">
+      <div
+        style="width: 500px"
+        :class="['grid gap-4', { 'opacity-30': state.loading }]"
+      >
         <Input
           v-model="state.formValues.name"
           name="name"
           placeholder="Item Name"
-          :disabled="state.disabled"
+          :disabled="state.formIsDisabled"
           autofocus
         />
         <Input
           v-model="state.formValues.recipient"
           name="recipient"
           placeholder="Recipient Address"
-          :disabled="state.disabled"
+          :disabled="state.formIsDisabled"
         />
         <Textarea
           v-model="state.formValues.description"
           name="description"
           placeholder="Description"
-          :disabled="state.disabled"
+          :disabled="state.formIsDisabled"
           class="h-20"
         />
-        <FileInput @input="handleSelectAirdropFile($event)"
+        <FileInput
+          @input="handleSelectAirdropFile($event)"
+          :disabled="state.formIsDisabled"
           >Select File</FileInput
         >
         <Label v-if="state.formValues.file">{{
@@ -32,6 +37,7 @@
         <Checkbox
           @click="state.showEncryptionMenu = !state.showEncryptionMenu"
           :checked="state.showEncryptionMenu"
+          :disabled="state.formIsDisabled"
         >
           Enable Encryption
         </Checkbox>
@@ -45,6 +51,14 @@
         >
       </div>
     </form>
+  </div>
+  <div v-if="state.loading" class="relative flex justify-center">
+    <!-- TODO-- y center this -->
+    <ProgressBar
+      :percentage="state.progress.percentage"
+      :text="state.progress.text"
+      class="absolute bottom-40 w-4/5"
+    />
   </div>
 </template>
 
@@ -60,6 +74,7 @@ import Textarea from '@/components/Textarea.vue'
 import FileInput from '@/components/FileInput.vue'
 import Checkbox from '@/components/Checkbox.vue'
 import Label from '@/components/Label.vue'
+import ProgressBar from '@/components/ProgressBar.vue'
 import EncryptionMenu from './EncryptionMenu.vue'
 
 const IPFS_ENDPOINT = import.meta.env.VITE_APP_IPFS_BASE_URL
@@ -78,7 +93,13 @@ interface State {
   senderKey: openpgp.PrivateKey | null
   recipientKey: openpgp.Key | null
 
+  formIsDisabled: boolean
   readyToSubmit: boolean
+
+  progress: {
+    text: string
+    percentage: number
+  }
 }
 
 const state: Ref<State> = ref({
@@ -94,7 +115,13 @@ const state: Ref<State> = ref({
   senderKey: null,
   recipientKey: null,
 
+  formIsDisabled: computed(() => !formIsReady()),
   readyToSubmit: computed(() => isReadyToSubmit()),
+
+  progress: {
+    text: '',
+    percentage: 0,
+  },
 })
 
 const isReadyToSubmit = () => {
@@ -113,6 +140,8 @@ const isReadyToSubmit = () => {
 
   return baseFormValuesAreComplete
 }
+
+const formIsReady = () => !state.value.disabled && !state.value.loading
 
 const handleSelectAirdropFile = (e: Event) => {
   const target = e.target as HTMLInputElement
@@ -148,12 +177,19 @@ const handleSubmit = async () => {
 
   // TODO-- add text above loader indicating what is happening
   try {
+    const isEncrypted = state.value.showEncryptionMenu
+
+    let currentStep = 0
+    const steps = isEncrypted ? 6 : 4
+
     // convert file to base64
+    state.value.progress = {
+      text: 'Formatting file for upload',
+      percentage: 0,
+    }
     let base64File = (await fileUtils.fileToBase64(
       state.value.formValues.file
     )) as string
-
-    const isEncrypted = state.value.showEncryptionMenu
 
     if (isEncrypted) {
       if (!state.value.senderKey || !state.value.recipientKey) {
@@ -161,9 +197,17 @@ const handleSubmit = async () => {
       }
 
       // format encryption items for openpgp
+      state.value.progress = {
+        text: 'Formatting file for encryption',
+        percentage: (currentStep++ / steps) * 100,
+      }
       const message = await openpgp.createMessage({ text: base64File })
 
       // encrypt with keypair
+      state.value.progress = {
+        text: 'Encrypting file',
+        percentage: (currentStep++ / steps) * 100,
+      }
       base64File = (await openpgp.encrypt({
         message,
         encryptionKeys: state.value.recipientKey,
@@ -172,6 +216,10 @@ const handleSubmit = async () => {
     }
 
     // upload to ipfs with metadata
+    state.value.progress = {
+      text: 'Uploading to IPFS',
+      percentage: (currentStep++ / steps) * 100,
+    }
     const uploadedFile = await uploadFile(base64File, {
       name: state.value.formValues.name,
       description: state.value.formValues.description,
@@ -183,17 +231,30 @@ const handleSubmit = async () => {
     // setting the tokenURI as the full url would break the app if infura went down
     const uploadedFileUrl = `https://ipfs.infura.io/ipfs/${uploadedFile.Hash}`
 
+    state.value.progress = {
+      text: 'Connecting to Polygon',
+      percentage: (currentStep++ / steps) * 100,
+    }
     const { contract: airdropContract } =
       await ethUtils.establishConnectionAndGetAirdropContract()
 
     // call create token method
+    state.value.progress = {
+      text: 'Intitiating airdrop transaction',
+      percentage: (currentStep++ / steps) * 100,
+    }
     const transaction = await airdropContract.createToken(
       uploadedFileUrl,
       state.value.formValues.recipient
     )
-    await transaction.wait()
 
     // TODO-- show success popup
+
+    state.value.progress = {
+      text: 'Confirming transaction',
+      percentage: (currentStep++ / steps) * 100,
+    }
+    await transaction.wait()
 
     // redirect to home
     router.replace('/')
