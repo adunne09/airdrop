@@ -114,7 +114,7 @@ const loadItems = async () => {
     // only show items you've received
     // address returned by metamask and address returned by contract have slightly different casing
     state.value.sentItems = items.filter(
-      ({ recipient }) => res.address.toLowerCase() === recipient.toLowerCase()
+      ({ sender }) => res.address.toLowerCase() === sender.toLowerCase()
     )
   } catch (e) {
     console.error('failed to initialize;', e)

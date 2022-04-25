@@ -14,7 +14,7 @@
           Received Items
           <ArrowIcon class="transform rotate-180" />
         </router-link>
-        <div class="flex items-center">
+        <div class="flex items-center gap-4">
           <div
             class="grid gap-4 overflow-y-auto"
             style="grid-template-columns: repeat(3, 300px)"
@@ -261,8 +261,7 @@ const loadItems = async () => {
 
     // address returned by metamask and address returned by contract have slightly different casing
     const receivedItems = items.filter(
-      ({ recipient, claimed }) =>
-        res.address.toLowerCase() === recipient.toLowerCase() && claimed
+      ({ recipient }) => res.address.toLowerCase() === recipient.toLowerCase()
     )
     state.value.receivedItemsCount = receivedItems.length
     state.value.receivedItems = receivedItems.slice(0, 3)
