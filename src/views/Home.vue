@@ -26,8 +26,8 @@
             >
               <div class="p-4">
                 <p class="text-2xl font-semibold h-12">{{ item.name }}</p>
-                <div class="h-16 overflow-hidden">
-                  <p class="text-gray-400">{{ item.description }}</p>
+                <div class="h-16 overflow-hidden mt-2">
+                  <p class="text-gray-400 text-sm">{{ item.description }}</p>
                   <p class="text-gray-400">
                     Sender: {{ `${item.sender.slice(0, 10)}...` }}
                   </p>
@@ -93,8 +93,8 @@
             >
               <div class="p-4">
                 <p class="text-2xl font-semibold h-12">{{ item.name }}</p>
-                <div class="h-16 overflow-hidden">
-                  <p class="text-gray-400">{{ item.description }}</p>
+                <div class="h-16 overflow-hidden mt-2">
+                  <p class="text-gray-400 text-sm">{{ item.description }}</p>
                   <p class="text-gray-400">
                     Recipient: {{ `${item.recipient.slice(0, 10)}...` }}
                   </p>
