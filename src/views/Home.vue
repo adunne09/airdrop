@@ -28,7 +28,7 @@
                 <div class="h-16 overflow-hidden">
                   <p class="text-gray-400">{{ item.description }}</p>
                   <p class="text-gray-400">
-                    Sender {{ `${item.sender.slice(0, 10)}...` }}
+                    Sender: {{ `${item.sender.slice(0, 10)}...` }}
                   </p>
                 </div>
               </div>
@@ -86,7 +86,7 @@
                 <div class="h-16 overflow-hidden">
                   <p class="text-gray-400">{{ item.description }}</p>
                   <p class="text-gray-400">
-                    Sender {{ `${item.sender.slice(0, 10)}...` }}
+                    Recipient: {{ `${item.recipient.slice(0, 10)}...` }}
                   </p>
                 </div>
               </div>

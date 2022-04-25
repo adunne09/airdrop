@@ -17,11 +17,7 @@
           <div class="h-16 overflow-hidden">
             <p class="text-gray-400">{{ item.description }}</p>
             <p class="text-gray-400">
-              {{
-                item.role === 'sender'
-                  ? `Recipient: ${item.recipient.slice(0, 20)}...`
-                  : `Sender: ${item.sender.slice(0, 10)}...`
-              }}
+              Recipient: {{ `${item.recipient.slice(0, 10)}...` }}
             </p>
           </div>
         </div>
