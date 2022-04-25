@@ -1,107 +1,46 @@
 <template>
   <ProgressBar v-if="state.loading" :loading="state.loading" class="w-96" />
-  <div v-else class="grid gap-4">
-    <div>
-      <h2 v-if="!state.receivedItems.length">
-        You haven't received any items.
-      </h2>
-      <div v-else>
-        <router-link
-          to="/received-items"
-          class="flex flex-start font-bold pb-2 items-center gap-2 hover:underline"
-        >
-          Received Items
-          <ArrowIcon class="transform rotate-180" />
-        </router-link>
-        <div class="flex items-center">
-          <div
-            class="grid gap-4 overflow-y-auto"
-            style="grid-template-columns: repeat(3, 300px)"
-          >
-            <div
-              class="border shadow rounded-xl overflow-hidden"
-              v-for="(item, index) in state.receivedItems"
-              :key="index"
-            >
-              <div class="p-4">
-                <p class="text-2xl font-semibold h-16">{{ item.name }}</p>
-                <div class="h-16 overflow-hidden">
-                  <p class="text-gray-400">{{ item.description }}</p>
-                  <p class="text-gray-400">
-                    Sender {{ `${item.sender.slice(0, 10)}...` }}
-                  </p>
-                </div>
-              </div>
-              <div class="flex p-4 bg-black">
-                <Button
-                  v-if="!item.claimed"
-                  kind="primary"
-                  @click="handleClaimItem(item.tokenId)"
-                  :loading="item.loading"
-                >
-                  Unclaimed
-                </Button>
-                <Button
-                  v-else-if="item.claimed"
-                  kind="primary"
-                  @click="handleDownloadItem(item)"
-                >
-                  Download
-                </Button>
-              </div>
-            </div>
+  <div v-else>
+    <h2 v-if="!state.items.length">You haven't received any items.</h2>
+    <div
+      v-else
+      class="grid gap-4 overflow-y-auto"
+      style="grid-template-columns: repeat(3, 300px)"
+    >
+      <div
+        class="border shadow rounded-xl overflow-hidden"
+        v-for="(item, index) in state.items"
+        :key="index"
+      >
+        <div class="p-4">
+          <p class="text-2xl font-semibold h-16">{{ item.name }}</p>
+          <div class="h-16 overflow-hidden">
+            <p class="text-gray-400">{{ item.description }}</p>
+            <p class="text-gray-400">
+              {{
+                item.role === 'sender'
+                  ? `Recipient: ${item.recipient.slice(0, 20)}...`
+                  : `Sender: ${item.sender.slice(0, 10)}...`
+              }}
+            </p>
           </div>
-          <ArrowIcon
-            v-if="state.receivedItemsCount > 3"
-            class="transform rotate-180 cursor-pointer"
-            fill="#EC4899"
-            @click="router.push('/received-items')"
-          />
         </div>
-      </div>
-    </div>
-
-    <div>
-      <h2 v-if="!state.sentItems.length">You haven't sent any items.</h2>
-      <div v-else>
-        <router-link
-          to="/sent-items"
-          class="flex flex-start font-bold pb-2 items-center gap-2 hover:underline"
-        >
-          Sent Items
-          <ArrowIcon class="transform rotate-180" />
-        </router-link>
-        <div class="flex items-center gap-4">
-          <div
-            class="grid gap-4 overflow-y-auto"
-            style="grid-template-columns: repeat(3, 300px)"
+        <div class="flex p-4 bg-black">
+          <Button
+            v-if="!item.claimed"
+            kind="primary"
+            @click="handleClaimItem(item.tokenId)"
+            :loading="item.loading"
           >
-            <div
-              class="border shadow rounded-xl overflow-hidden"
-              v-for="(item, index) in state.sentItems"
-              :key="index"
-            >
-              <div class="p-4">
-                <p class="text-2xl font-semibold h-16">{{ item.name }}</p>
-                <div class="h-16 overflow-hidden">
-                  <p class="text-gray-400">{{ item.description }}</p>
-                  <p class="text-gray-400">
-                    Sender {{ `${item.sender.slice(0, 10)}...` }}
-                  </p>
-                </div>
-              </div>
-              <div class="flex p-4 bg-black justify-center">
-                <Label :kind="item.claimed ? 'secondary' : 'primary'">{{
-                  item.claimed ? 'Claimed' : 'Unclaimed'
-                }}</Label>
-              </div>
-            </div>
-          </div>
-          <ArrowIcon
-            v-if="state.sentItemsCount > 3"
-            class="transform rotate-180 cursor-pointer"
-            @click="router.push('/sent-items')"
-          />
+            Unclaimed
+          </Button>
+          <Button
+            v-else-if="item.claimed"
+            kind="primary"
+            @click="handleDownloadItem(item)"
+          >
+            Download
+          </Button>
         </div>
       </div>
     </div>
@@ -121,8 +60,8 @@
         </FileInput>
 
         <Input
-          v-if="state.encryptionValues.recipientKeyfile"
-          v-model="state.encryptionValues.recipientPassphrase"
+          v-if="state.formValues.recipientKeyfile"
+          v-model="state.formValues.recipientPassphrase"
           name="key-passphrase"
           placeholder="Passphrase"
           type="password"
@@ -136,7 +75,7 @@
           <Button
             type="submit"
             kind="primary"
-            :disabled="!state.encryptionValues.recipientPassphrase.length"
+            :disabled="!state.formValues.recipientPassphrase.length"
           >
             Decrypt
           </Button>
@@ -156,14 +95,9 @@ import ProgressBar from '@/components/ProgressBar.vue'
 import Modal from '@/components/Modal.vue'
 import FileInput from '@/components/FileInput.vue'
 import Input from '@/components/Input.vue'
-import Label from '@/components/Label.vue'
 import Button from '@/components/Button.vue'
-import ArrowIcon from '@/assets/arrow.svg?component'
 import * as openpgp from 'openpgp'
 import { ethUtils, fileUtils } from '../utils'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
 
 interface AirdropBlockchainItem {
   tokenId: BigNumber
@@ -188,16 +122,10 @@ interface Item {
 interface State {
   loading: boolean
   signer?: ethers.providers.JsonRpcSigner
-
-  sentItems: Item[]
-  sentItemsCount: number
-
-  receivedItems: Item[]
-  receivedItemsCount: number
-  hasUnclaimedItems: boolean
+  items: Item[]
 
   itemIdToDecrypt: number | null
-  encryptionValues: {
+  formValues: {
     recipientKeyfile?: File
     recipientPassphrase: string
   }
@@ -205,16 +133,10 @@ interface State {
 
 const state: Ref<State> = ref({
   loading: false,
-
-  sentItems: [],
-  sentItemsCount: 0,
-
-  receivedItems: [],
-  receivedItemsCount: 0,
-  hasUnclaimedItems: false,
+  items: [],
 
   itemIdToDecrypt: null,
-  encryptionValues: {
+  formValues: {
     recipientKey: null,
     recipientPassphrase: '',
     senderKey: null,
@@ -255,19 +177,11 @@ const loadItems = async () => {
       })
     )
 
+    // only show items you've received
     // address returned by metamask and address returned by contract have slightly different casing
-    const receivedItems = items.filter(
-      ({ recipient, claimed }) =>
-        address.toLowerCase() === recipient.toLowerCase() && claimed
+    state.value.items = items.filter(
+      ({ recipient }) => address.toLowerCase() === recipient.toLowerCase()
     )
-    state.value.receivedItemsCount = receivedItems.length
-    state.value.receivedItems = receivedItems.slice(0, 3)
-
-    const sentItems = items.filter(
-      ({ sender }) => address.toLowerCase() === sender.toLowerCase()
-    )
-    state.value.sentItemsCount = sentItems.length
-    state.value.sentItems = sentItems.slice(0, 3)
   } catch (e) {
     console.error('failed to initialize;', e)
   } finally {
@@ -298,18 +212,18 @@ const handleDownloadItem = (item: Item) => {
 const handleSelectDecryptionKey = (e: Event) => {
   const target = e.target as HTMLInputElement
   const file = (target.files as FileList)[0]
-  state.value.encryptionValues.recipientKeyfile = file
+  state.value.formValues.recipientKeyfile = file
 }
 
 const handleDownloadEncryptedItem = async () => {
   try {
-    if (!state.value.encryptionValues.recipientKeyfile) {
+    if (!state.value.formValues.recipientKeyfile) {
       throw new Error(
         'failed to download encypted item; recipient private key file not selected'
       )
     }
 
-    const item = state.value.receivedItems.find(
+    const item = state.value.items.find(
       ({ tokenId }) => tokenId === state.value.itemIdToDecrypt
     )!
 
@@ -321,14 +235,14 @@ const handleDownloadEncryptedItem = async () => {
     const privateKeyEndIdentifier = '-----END PGP PRIVATE KEY BLOCK-----'
 
     const privateKeyRaw = (await fileUtils.parseStringFromFile(
-      state.value.encryptionValues.recipientKeyfile,
+      state.value.formValues.recipientKeyfile,
       privateKeyStartIdentifier,
       privateKeyEndIdentifier
     )) as string
 
     const senderPrivateKey = await openpgp.decryptKey({
       privateKey: await openpgp.readPrivateKey({ armoredKey: privateKeyRaw }),
-      passphrase: state.value.encryptionValues.recipientPassphrase,
+      passphrase: state.value.formValues.recipientPassphrase,
     })
 
     const { data, signatures } = await openpgp.decrypt({
@@ -357,7 +271,7 @@ const handleDownloadEncryptedItem = async () => {
 }
 
 const handleClaimItem = async (id: number) => {
-  const item = state.value.receivedItems.find(({ tokenId }) => tokenId === id)
+  const item = state.value.items.find(({ tokenId }) => tokenId === id)
 
   if (!item) {
     console.error('failed to find item')

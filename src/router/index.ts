@@ -19,11 +19,19 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: '/unclaimed-items',
-    name: 'unclaimed-items',
-    component: () => import('../views/UnclaimedItems.vue'),
+    path: '/received-items',
+    name: 'received-items',
+    component: () => import('../views/ReceivedItems.vue'),
     meta: {
-      title: 'Unclaimed Items',
+      title: 'Received Items',
+    },
+  },
+  {
+    path: '/sent-items',
+    name: 'sent-items',
+    component: () => import('../views/SentItems.vue'),
+    meta: {
+      title: 'Sent Items',
     },
   },
 ]

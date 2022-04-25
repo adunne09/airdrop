@@ -12,13 +12,17 @@
         <Status :status="state.status">{{ state.address }}</Status>
       </div>
       <div
-        class="flex justify-around m2-4 items-center border-2 border-pink-500 rounded-lg"
+        class="grid items-center border-2 border-pink-500 rounded-lg"
+        style="grid-template-columns: repeat(4, 200px)"
       >
-        <HeaderLink to="/" title="Home" />
-        <div class="border border-pink-500 h-4" />
+        <div class="border-r border-pink-500">
+          <HeaderLink to="/" title="Home" />
+        </div>
         <HeaderLink to="/create-item" title="Create Item" />
-        <div class="border border-pink-500 h-4" />
-        <HeaderLink to="/unclaimed-items" title="Unclaimed Items" />
+        <div class="border-x border-pink-500">
+          <HeaderLink to="/received-items" title="Received Items" />
+        </div>
+        <HeaderLink to="/sent-items" title="Sent Items" />
       </div>
     </div>
     <div class="flex-1 mb-7 border-b-2 border-pink-500" />

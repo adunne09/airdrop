@@ -1,17 +1,27 @@
 <template>
   <label
     :for="labelFor"
-    class="text-pink-500 ease-out text-sm leading-2 tracking-widest font-semibold uppercase"
+    :class="[
+      'ease-out text-sm leading-2 tracking-widest font-semibold uppercase',
+      { 'text-pink-500': kind === 'primary' },
+      { 'text-purple-600': kind === 'secondary' },
+    ]"
   >
     <slot />
   </label>
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  disabled?: boolean
-  labelFor?: string
-}>()
+withDefaults(
+  defineProps<{
+    disabled?: boolean
+    labelFor?: string
+    kind?: 'primary' | 'secondary'
+  }>(),
+  {
+    kind: 'primary',
+  }
+)
 </script>
 
 <style scoped></style>
