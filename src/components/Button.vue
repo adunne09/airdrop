@@ -27,7 +27,7 @@ import LoaderIcon from '@/assets/loader.svg?component'
 
 withDefaults(
   defineProps<{
-    kind?: 'primary' | 'seconday' | 'text'
+    kind?: 'primary' | 'secondary' | 'text'
     disabled?: boolean
     loading?: boolean
   }>(),

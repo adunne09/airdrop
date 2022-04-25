@@ -235,15 +235,17 @@ const handleSubmit = async () => {
       text: 'Connecting to Polygon',
       percentage: (currentStep++ / steps) * 100,
     }
-    const { contract: airdropContract } =
-      await ethUtils.establishConnectionAndGetAirdropContract()
+    const res = await ethUtils.establishConnectionAndGetAirdropContract()
+    if (!res) {
+      return
+    }
 
     // call create token method
     state.value.progress = {
       text: 'Intitiating airdrop transaction',
       percentage: (currentStep++ / steps) * 100,
     }
-    const transaction = await airdropContract.createToken(
+    const transaction = await res.contract.createToken(
       uploadedFileUrl,
       state.value.formValues.recipient
     )

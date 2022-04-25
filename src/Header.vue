@@ -56,10 +56,12 @@ ethUtils.registerAccountChangeHandler((accounts: string[]) => {
 
 onMounted(async () => {
   try {
-    const { address } =
-      await ethUtils.establishConnectionAndGetAirdropContract()
+    const res = await ethUtils.establishConnectionAndGetAirdropContract()
+    if (!res) {
+      return
+    }
 
-    state.value.address = address
+    state.value.address = res.address
     state.value.status = 'success'
   } catch (e) {
     state.value.status = 'error'

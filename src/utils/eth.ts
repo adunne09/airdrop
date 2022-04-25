@@ -7,9 +7,10 @@ const AIRDROP_CONTRACT_ADDRESS = import.meta.env
   .VITE_APP_AIRDROP_CONTRACT_ADDRESS
 const CHAIN_ID = +import.meta.env.VITE_APP_POLYGON_MUMBAI_TESTNET_CHAIN_ID // parse to int
 
-export const establishConnectionAndGetAirdropContract = async (): Promise<
-  { address: string; contract: ethers.Contract } | { message: unknown }
-> => {
+export const establishConnectionAndGetAirdropContract = async (): Promise<{
+  address: string
+  contract: ethers.Contract
+} | null> => {
   try {
     // establish initial eth connection
     const connection = (await detectEthereumProvider()) as any
@@ -49,7 +50,8 @@ export const establishConnectionAndGetAirdropContract = async (): Promise<
       ),
     }
   } catch (e) {
-    return { message: e }
+    console.error('failed to establish web3 connection;', e)
+    return null
   }
 }
 

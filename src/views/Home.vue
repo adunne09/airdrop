@@ -227,14 +227,16 @@ const loadItems = async () => {
   state.value.loading = true
 
   try {
-    const { address, contract: airdropContract } =
-      await ethUtils.establishConnectionAndGetAirdropContract()
+    const res = await ethUtils.establishConnectionAndGetAirdropContract()
+    if (!res) {
+      return
+    }
 
-    const data = await airdropContract.fetchItems()
+    const data = await res.contract.fetchItems()
 
     const items: Item[] = await Promise.all(
       data.map(async (item: AirdropBlockchainItem) => {
-        const tokenUri = await airdropContract.tokenURI(item.tokenId)
+        const tokenUri = await res.contract.tokenURI(item.tokenId)
         const meta = await axios.get(tokenUri)
 
         let senderPublicKey
@@ -258,13 +260,13 @@ const loadItems = async () => {
     // address returned by metamask and address returned by contract have slightly different casing
     const receivedItems = items.filter(
       ({ recipient, claimed }) =>
-        address.toLowerCase() === recipient.toLowerCase() && claimed
+        res.address.toLowerCase() === recipient.toLowerCase() && claimed
     )
     state.value.receivedItemsCount = receivedItems.length
     state.value.receivedItems = receivedItems.slice(0, 3)
 
     const sentItems = items.filter(
-      ({ sender }) => address.toLowerCase() === sender.toLowerCase()
+      ({ sender }) => res.address.toLowerCase() === sender.toLowerCase()
     )
     state.value.sentItemsCount = sentItems.length
     state.value.sentItems = sentItems.slice(0, 3)
@@ -367,10 +369,12 @@ const handleClaimItem = async (id: number) => {
   item.loading = true
 
   try {
-    const { contract: airdropContract } =
-      await ethUtils.establishConnectionAndGetAirdropContract()
+    const res = await ethUtils.establishConnectionAndGetAirdropContract()
+    if (!res) {
+      return
+    }
 
-    const transaction = await airdropContract.claimItem(id)
+    const transaction = await res.contract.claimItem(id)
     await transaction.wait()
 
     item.claimed = true

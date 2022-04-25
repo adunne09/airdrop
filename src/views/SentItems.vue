@@ -89,14 +89,16 @@ const loadItems = async () => {
   state.value.loading = true
 
   try {
-    const { address, contract: airdropContract } =
-      await ethUtils.establishConnectionAndGetAirdropContract()
+    const res = await ethUtils.establishConnectionAndGetAirdropContract()
+    if (!res) {
+      return
+    }
 
-    const data = await airdropContract.fetchItems()
+    const data = await res.contract.fetchItems()
 
     const items: Item[] = await Promise.all(
       data.map(async (item: AirdropBlockchainItem) => {
-        const tokenUri = await airdropContract.tokenURI(item.tokenId)
+        const tokenUri = await res.contract.tokenURI(item.tokenId)
         const meta = await axios.get(tokenUri)
 
         return {
@@ -112,7 +114,7 @@ const loadItems = async () => {
     // only show items you've received
     // address returned by metamask and address returned by contract have slightly different casing
     state.value.sentItems = items.filter(
-      ({ recipient }) => address.toLowerCase() === recipient.toLowerCase()
+      ({ recipient }) => res.address.toLowerCase() === recipient.toLowerCase()
     )
   } catch (e) {
     console.error('failed to initialize;', e)
