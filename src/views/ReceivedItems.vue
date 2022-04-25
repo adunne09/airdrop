@@ -13,12 +13,21 @@
         :key="index"
       >
         <div class="p-4">
-          <p class="text-2xl font-semibold h-16">{{ item.name }}</p>
+          <p class="text-2xl font-semibold h-12">{{ item.name }}</p>
           <div class="h-16 overflow-hidden">
             <p class="text-gray-400">{{ item.description }}</p>
             <p class="text-gray-400">
               Sender: {{ `${item.sender.slice(0, 10)}...` }}
             </p>
+          </div>
+          <div class="h-4">
+            <Status
+              v-if="item.senderPublicKey"
+              status="failure"
+              class="flex justify-center"
+            >
+              Encrypted
+            </Status>
           </div>
         </div>
         <div class="flex p-4 bg-black">
@@ -92,6 +101,7 @@ import Modal from '@/components/Modal.vue'
 import FileInput from '@/components/FileInput.vue'
 import Input from '@/components/Input.vue'
 import Button from '@/components/Button.vue'
+import Status from '@/components/Status.vue'
 import * as openpgp from 'openpgp'
 import { ethUtils, fileUtils } from '../utils'
 

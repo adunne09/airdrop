@@ -13,12 +13,21 @@
         :key="index"
       >
         <div class="p-4">
-          <p class="text-2xl font-semibold h-16">{{ item.name }}</p>
+          <p class="text-2xl font-semibold h-12">{{ item.name }}</p>
           <div class="h-16 overflow-hidden">
             <p class="text-gray-400">{{ item.description }}</p>
             <p class="text-gray-400">
               Recipient: {{ `${item.recipient.slice(0, 10)}...` }}
             </p>
+          </div>
+          <div class="h-4">
+            <Status
+              v-if="item.senderPublicKey"
+              status="failure"
+              class="flex justify-center"
+            >
+              Encrypted
+            </Status>
           </div>
         </div>
         <div class="flex p-4 bg-black justify-center">
@@ -38,6 +47,7 @@ import { BigNumber, ethers } from 'ethers'
 import axios from 'axios'
 import ProgressBar from '@/components/ProgressBar.vue'
 import Label from '@/components/Label.vue'
+import Status from '@/components/Status.vue'
 import { ethUtils } from '../utils'
 
 interface AirdropBlockchainItem {
@@ -57,6 +67,7 @@ interface Item {
   claimed: boolean
   role: 'sender' | 'recipient'
   loading?: boolean
+  senderPublicKey: string
 }
 
 interface State {
@@ -107,6 +118,7 @@ const loadItems = async () => {
           name: meta.data.name,
           description: meta.data.description,
           file: meta.data.file,
+          senderPublicKey: meta.data.senderPublicKey,
         }
       })
     )
