@@ -10,6 +10,7 @@
           to="/received-items"
           class="flex flex-start font-bold pb-2 items-center gap-2 hover:underline"
         >
+          <Status v-if="state.hasUnclaimedItems" status="pending" />
           Received Items
           <ArrowIcon class="transform rotate-180" />
         </router-link>
@@ -158,6 +159,7 @@ import FileInput from '@/components/FileInput.vue'
 import Input from '@/components/Input.vue'
 import Label from '@/components/Label.vue'
 import Button from '@/components/Button.vue'
+import Status from '@/components/Status.vue'
 import ArrowIcon from '@/assets/arrow.svg?component'
 import * as openpgp from 'openpgp'
 import { ethUtils, fileUtils } from '../utils'
@@ -264,6 +266,9 @@ const loadItems = async () => {
     )
     state.value.receivedItemsCount = receivedItems.length
     state.value.receivedItems = receivedItems.slice(0, 3)
+    state.value.hasUnclaimedItems = receivedItems.some(
+      ({ claimed }) => !claimed
+    )
 
     const sentItems = items.filter(
       ({ sender }) => res.address.toLowerCase() === sender.toLowerCase()
