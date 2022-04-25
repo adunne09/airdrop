@@ -1,6 +1,6 @@
 <template>
   <div
-    class="w-full absolute bottom-0 border-t-2 border-pink-500 flex gap-4 justify-center"
+    class="w-full fixed bottom-0 border-t-2 border-pink-500 flex gap-4 justify-center bg-white"
   >
     <Label>{{ version }}</Label>
     <Label kind="secondary">2022 {{ author }}</Label>

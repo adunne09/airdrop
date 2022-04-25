@@ -4,7 +4,7 @@
     <h2 v-if="!state.items.length">You haven't received any items.</h2>
     <div
       v-else
-      class="grid gap-4 overflow-y-auto"
+      class="grid gap-4 overflow-y-auto mb-8"
       style="grid-template-columns: repeat(3, 300px)"
     >
       <div

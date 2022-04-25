@@ -1,6 +1,6 @@
 <template>
   <ProgressBar v-if="state.loading" :loading="state.loading" class="w-96" />
-  <div v-else class="grid gap-4">
+  <div v-else class="grid gap-4 mb-8">
     <div>
       <h2 v-if="!state.receivedItems.length">
         You haven't received any items.
