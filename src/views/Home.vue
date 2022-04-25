@@ -382,6 +382,10 @@ const handleClaimItem = async (id: number) => {
     await transaction.wait()
 
     item.claimed = true
+
+    state.value.hasUnclaimedItems = state.value.receivedItems.some(
+      ({ claimed }) => !claimed
+    )
   } catch (e) {
     console.error('failed to claim item;', e)
   } finally {
