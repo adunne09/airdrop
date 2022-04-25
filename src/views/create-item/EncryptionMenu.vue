@@ -33,6 +33,13 @@
           type="password"
           autofocus
         />
+
+        <span
+          v-if="state.encryptionValues.error.length"
+          class="font-bold text-red-500"
+          >{{ state.encryptionValues.error }}</span
+        >
+
         <Button
           type="submit"
           kind="primary"
@@ -63,6 +70,7 @@
           placeholder="Passphrase"
           type="password"
         />
+
         <a ref="downloadKeyfileAnchor" class="hidden" />
         <Button
           type="submit"
@@ -102,6 +110,8 @@ interface State {
 
     recipientPublicKey: openpgp.Key | null // must successfully read key
     recipientKeyfile?: File
+
+    error: string
   }
 
   showGenerateKeyMenu: boolean
@@ -119,6 +129,8 @@ const state: Ref<State> = ref({
     senderNewKeyName: '',
 
     recipientPublicKey: null,
+
+    error: '',
   },
 
   showGenerateKeyMenu: false,
@@ -167,8 +179,14 @@ const handleReadSenderKeyfile = async () => {
     emits('update:senderKey', senderPrivateKey)
 
     state.value.showEnterPassphrase = false
+    state.value.encryptionValues.error = ''
   } catch (e) {
     console.error('failed to read sender keyfile;', e)
+
+    if ((e as any).message?.indexOf('Incorrect key passphrase') !== -1) {
+      console.log('herere')
+      state.value.encryptionValues.error = 'Incorrect key passphrase'
+    }
   }
 }
 

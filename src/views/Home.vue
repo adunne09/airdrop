@@ -148,6 +148,12 @@
           autofocus
         />
 
+        <span
+          v-if="state.encryptionValues.error.length"
+          class="font-bold text-red-500"
+          >{{ state.encryptionValues.error }}</span
+        >
+
         <div class="flex">
           <Button kind="text" @click="state.itemIdToDecrypt = null">
             Cancel
@@ -220,6 +226,8 @@ interface State {
   encryptionValues: {
     recipientKeyfile?: File
     recipientPassphrase: string
+
+    error: string
   }
 }
 
@@ -238,6 +246,8 @@ const state: Ref<State> = ref({
     recipientKey: null,
     recipientPassphrase: '',
     senderKey: null,
+
+    error: '',
   },
 })
 
@@ -375,8 +385,13 @@ const handleDownloadEncryptedItem = async () => {
     downloadItemAnchor.value!.click()
 
     state.value.itemIdToDecrypt = null
+    state.value.encryptionValues.error = ''
   } catch (e) {
     console.error('failed to download item;', e)
+
+    if ((e as any).message?.indexOf('Incorrect key passphrase') !== -1) {
+      state.value.encryptionValues.error = 'Incorrect key passphrase'
+    }
   }
 }
 

@@ -65,13 +65,19 @@
         </FileInput>
 
         <Input
-          v-if="state.formValues.recipientKeyfile"
-          v-model="state.formValues.recipientPassphrase"
+          v-if="state.encryptionValues.recipientKeyfile"
+          v-model="state.encryptionValues.recipientPassphrase"
           name="key-passphrase"
           placeholder="Passphrase"
           type="password"
           autofocus
         />
+
+        <span
+          v-if="state.encryptionValues.error.length"
+          class="font-bold text-red-500"
+          >{{ state.encryptionValues.error }}</span
+        >
 
         <div class="flex">
           <Button kind="text" @click="state.itemIdToDecrypt = null">
@@ -80,7 +86,7 @@
           <Button
             type="submit"
             kind="primary"
-            :disabled="!state.formValues.recipientPassphrase.length"
+            :disabled="!state.encryptionValues.recipientPassphrase.length"
           >
             Decrypt
           </Button>
@@ -131,9 +137,11 @@ interface State {
   items: Item[]
 
   itemIdToDecrypt: number | null
-  formValues: {
+  encryptionValues: {
     recipientKeyfile?: File
     recipientPassphrase: string
+
+    error: string
   }
 }
 
@@ -142,10 +150,12 @@ const state: Ref<State> = ref({
   items: [],
 
   itemIdToDecrypt: null,
-  formValues: {
+  encryptionValues: {
     recipientKey: null,
     recipientPassphrase: '',
     senderKey: null,
+
+    error: '',
   },
 })
 
@@ -220,12 +230,12 @@ const handleDownloadItem = (item: Item) => {
 const handleSelectDecryptionKey = (e: Event) => {
   const target = e.target as HTMLInputElement
   const file = (target.files as FileList)[0]
-  state.value.formValues.recipientKeyfile = file
+  state.value.encryptionValues.recipientKeyfile = file
 }
 
 const handleDownloadEncryptedItem = async () => {
   try {
-    if (!state.value.formValues.recipientKeyfile) {
+    if (!state.value.encryptionValues.recipientKeyfile) {
       throw new Error(
         'failed to download encypted item; recipient private key file not selected'
       )
@@ -243,14 +253,14 @@ const handleDownloadEncryptedItem = async () => {
     const privateKeyEndIdentifier = '-----END PGP PRIVATE KEY BLOCK-----'
 
     const privateKeyRaw = (await fileUtils.parseStringFromFile(
-      state.value.formValues.recipientKeyfile,
+      state.value.encryptionValues.recipientKeyfile,
       privateKeyStartIdentifier,
       privateKeyEndIdentifier
     )) as string
 
     const senderPrivateKey = await openpgp.decryptKey({
       privateKey: await openpgp.readPrivateKey({ armoredKey: privateKeyRaw }),
-      passphrase: state.value.formValues.recipientPassphrase,
+      passphrase: state.value.encryptionValues.recipientPassphrase,
     })
 
     const { data, signatures } = await openpgp.decrypt({
@@ -273,8 +283,13 @@ const handleDownloadEncryptedItem = async () => {
     downloadItemAnchor.value!.click()
 
     state.value.itemIdToDecrypt = null
+    state.value.encryptionValues.error = ''
   } catch (e) {
     console.error('failed to download item;', e)
+
+    if ((e as any).message?.indexOf('Incorrect key passphrase') !== -1) {
+      state.value.encryptionValues.error = 'Incorrect key passphrase'
+    }
   }
 }
 
