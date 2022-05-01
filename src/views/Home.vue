@@ -198,7 +198,14 @@ interface AirdropBlockchainItem {
   claimed: boolean
 }
 
-interface Item {
+interface AirdropMetadata {
+  name: string
+  description: string
+  file: string
+  senderPublicKey?: string
+}
+
+interface AirdropItem {
   tokenId: number
   sender: string
   recipient: string
@@ -215,10 +222,10 @@ interface State {
   loading: boolean
   signer?: ethers.providers.JsonRpcSigner
 
-  sentItems: Item[]
+  sentItems: AirdropItem[]
   sentItemsCount: number
 
-  receivedItems: Item[]
+  receivedItems: AirdropItem[]
   receivedItemsCount: number
   hasUnclaimedItems: boolean
 
@@ -257,17 +264,17 @@ const loadItems = async () => {
   state.value.loading = true
 
   try {
-    const res = await ethUtils.establishConnectionAndGetAirdropContract()
-    if (!res) {
-      return
+    const [res, err] = await ethUtils.establishConnectionAndGetAirdropContract()
+    if (err) {
+      throw new Error(err.message)
     }
 
     const data = await res.contract.fetchItems()
 
-    const items: Item[] = await Promise.all(
+    const items: AirdropItem[] = await Promise.all(
       data.map(async (item: AirdropBlockchainItem) => {
         const tokenUri = await res.contract.tokenURI(item.tokenId)
-        const meta = await axios.get(tokenUri)
+        const meta = await axios.get<AirdropMetadata>(tokenUri)
 
         let senderPublicKey
         if (meta.data.senderPublicKey) {
@@ -313,7 +320,7 @@ ethUtils.registerAccountChangeHandler(() => loadItems())
 
 onMounted(() => loadItems())
 
-const handleDownloadItem = (item: Item) => {
+const handleDownloadItem = (item: AirdropItem) => {
   if (item.senderPublicKey) {
     state.value.itemIdToDecrypt = item.tokenId
     return
@@ -354,11 +361,14 @@ const handleDownloadEncryptedItem = async () => {
     const privateKeyStartIdentifier = '-----BEGIN PGP PRIVATE KEY BLOCK-----'
     const privateKeyEndIdentifier = '-----END PGP PRIVATE KEY BLOCK-----'
 
-    const privateKeyRaw = (await fileUtils.parseStringFromFile(
+    const [privateKeyRaw, err] = await fileUtils.parseStringFromFile(
       state.value.encryptionValues.recipientKeyfile,
       privateKeyStartIdentifier,
       privateKeyEndIdentifier
-    )) as string
+    )
+    if (err) {
+      throw new Error(err.message)
+    }
 
     const senderPrivateKey = await openpgp.decryptKey({
       privateKey: await openpgp.readPrivateKey({ armoredKey: privateKeyRaw }),
@@ -406,9 +416,9 @@ const handleClaimItem = async (id: number) => {
   item.loading = true
 
   try {
-    const res = await ethUtils.establishConnectionAndGetAirdropContract()
-    if (!res) {
-      return
+    const [res, err] = await ethUtils.establishConnectionAndGetAirdropContract()
+    if (err) {
+      throw new Error(err.message)
     }
 
     const transaction = await res.contract.claimItem(id)

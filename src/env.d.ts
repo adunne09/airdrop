@@ -7,3 +7,5 @@ declare module '*.vue' {
   const component: DefineComponent<{}, {}, any>
   export default component
 }
+
+declare type MonadType<T> = [T, null] | [null, { message: string }]

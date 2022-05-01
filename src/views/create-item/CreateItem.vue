@@ -173,6 +173,10 @@ const uploadFile = async (content: string, metadata: Object) => {
 }
 
 const handleSubmit = async () => {
+  if (!state.value.formValues.file) {
+    return
+  }
+
   state.value.loading = true
 
   // TODO-- add text above loader indicating what is happening
@@ -187,9 +191,14 @@ const handleSubmit = async () => {
       text: 'Formatting file for upload',
       percentage: 0,
     }
-    let base64File = (await fileUtils.fileToBase64(
+    const [base64File, err] = await fileUtils.fileToBase64(
       state.value.formValues.file
-    )) as string
+    )
+    if (err) {
+      throw new Error(err.message)
+    }
+
+    let base64 = base64File
 
     if (isEncrypted) {
       if (!state.value.senderKey || !state.value.recipientKey) {
@@ -201,14 +210,14 @@ const handleSubmit = async () => {
         text: 'Formatting file for encryption',
         percentage: (currentStep++ / steps) * 100,
       }
-      const message = await openpgp.createMessage({ text: base64File })
+      const message = await openpgp.createMessage({ text: base64 })
 
       // encrypt with keypair
       state.value.progress = {
         text: 'Encrypting file',
         percentage: (currentStep++ / steps) * 100,
       }
-      base64File = (await openpgp.encrypt({
+      base64 = (await openpgp.encrypt({
         message,
         encryptionKeys: state.value.recipientKey,
         signingKeys: state.value.senderKey,
@@ -223,7 +232,6 @@ const handleSubmit = async () => {
     const uploadedFile = await uploadFile(base64File, {
       name: state.value.formValues.name,
       description: state.value.formValues.description,
-      isEncrypted,
       senderPublicKey: state.value.senderKey?.armor(),
     })
 
@@ -235,9 +243,10 @@ const handleSubmit = async () => {
       text: 'Connecting to Polygon',
       percentage: (currentStep++ / steps) * 100,
     }
-    const res = await ethUtils.establishConnectionAndGetAirdropContract()
-    if (!res) {
-      return
+    const [res, error] =
+      await ethUtils.establishConnectionAndGetAirdropContract()
+    if (error) {
+      throw new Error(error.message)
     }
 
     // call create token method

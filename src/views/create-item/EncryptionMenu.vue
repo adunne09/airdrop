@@ -104,7 +104,7 @@ interface State {
     senderPrivateKeyPassphrase: string
     senderPrivateKey: openpgp.PrivateKey | null // must successfully read key with the passphrase
     senderPublicKey: string
-    senderKeyfile?: File | { name: string }
+    senderKeyfile?: File
 
     senderNewKeyName: string
 
@@ -160,15 +160,22 @@ const handleUploadSenderKeyfile = (e: Event) => {
 }
 
 const handleReadSenderKeyfile = async () => {
+  if (!state.value.encryptionValues.senderKeyfile) {
+    return
+  }
+
   try {
     const privateKeyStartIdentifier = '-----BEGIN PGP PRIVATE KEY BLOCK-----'
     const privateKeyEndIdentifier = '-----END PGP PRIVATE KEY BLOCK-----'
 
-    const privateKeyRaw = (await await fileUtils.parseStringFromFile(
+    const [privateKeyRaw, err] = await fileUtils.parseStringFromFile(
       state.value.encryptionValues.senderKeyfile,
       privateKeyStartIdentifier,
       privateKeyEndIdentifier
-    )) as string
+    )
+    if (err) {
+      throw new Error(err.message)
+    }
 
     const senderPrivateKey = await openpgp.decryptKey({
       privateKey: await openpgp.readPrivateKey({ armoredKey: privateKeyRaw }),
@@ -213,7 +220,7 @@ const handleGenerateSenderKeyfile = async () => {
     const keyfileName = `${state.value.encryptionValues.senderNewKeyName}.txt`
     state.value.encryptionValues.senderKeyfile = {
       name: keyfileName,
-    }
+    } // contruct a new Blob
 
     emits('update:senderKey', senderPrivateKey)
     state.value.showGenerateKeyMenu = false
@@ -247,11 +254,14 @@ const handleUploadRecipientKeyfile = async (e: Event) => {
     const publicKeyStartIdentifier = '-----BEGIN PGP PUBLIC KEY BLOCK-----'
     const publicKeyEndIdentifier = '-----END PGP PUBLIC KEY BLOCK-----'
 
-    const publicKeyRaw = (await fileUtils.parseStringFromFile(
+    const [publicKeyRaw, err] = await fileUtils.parseStringFromFile(
       file,
       publicKeyStartIdentifier,
       publicKeyEndIdentifier
-    )) as string
+    )
+    if (err) {
+      throw new Error(err.message)
+    }
 
     const recipientPublicKey = await openpgp.readKey({
       armoredKey: publicKeyRaw,
