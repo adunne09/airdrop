@@ -76,8 +76,11 @@ import Checkbox from '@/components/Checkbox.vue'
 import Label from '@/components/Label.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
 import EncryptionMenu from './EncryptionMenu.vue'
+import { Buffer } from 'buffer/'
 
 const IPFS_ENDPOINT = import.meta.env.VITE_APP_IPFS_BASE_URL
+const IPFS_PROJECT_ID = import.meta.env.VITE_APP_IPFS_PROJECT_ID
+const IPFS_PROJECT_SECRET = import.meta.env.VITE_APP_IPFS_PROJECT_SECRET
 
 interface State {
   loading: boolean
@@ -165,6 +168,11 @@ const uploadFile = async (content: string, metadata: Object) => {
     const request = await fetch(url.toString(), {
       method: 'POST',
       body: formData,
+      headers: {
+        authorization: `basic ${Buffer.from(
+          `${IPFS_PROJECT_ID}:${IPFS_PROJECT_SECRET}`
+        ).toString('base64')}`,
+      },
     })
     return await request.json()
   } catch (e) {
@@ -229,7 +237,7 @@ const handleSubmit = async () => {
 
     // really you only have to created the token with the hash
     // setting the tokenURI as the full url would break the app if infura went down
-    const uploadedFileUrl = `https://ipfs.infura.io/ipfs/${uploadedFile.Hash}`
+    const uploadedFileUrl = `${IPFS_ENDPOINT}/api/v0/cat?arg=${uploadedFile.Hash}`
 
     state.value.progress = {
       text: 'Connecting to Polygon',

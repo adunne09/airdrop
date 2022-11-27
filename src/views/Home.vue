@@ -188,6 +188,10 @@ import ArrowIcon from '@/assets/arrow.svg?component'
 import * as openpgp from 'openpgp'
 import { ethUtils, fileUtils } from '../utils'
 import { useRouter } from 'vue-router'
+import { Buffer } from 'buffer/'
+
+const IPFS_PROJECT_ID = import.meta.env.VITE_APP_IPFS_PROJECT_ID
+const IPFS_PROJECT_SECRET = import.meta.env.VITE_APP_IPFS_PROJECT_SECRET
 
 const router = useRouter()
 
@@ -267,7 +271,13 @@ const loadItems = async () => {
     const items: Item[] = await Promise.all(
       data.map(async (item: AirdropBlockchainItem) => {
         const tokenUri = await res.contract.tokenURI(item.tokenId)
-        const meta = await axios.get(tokenUri)
+        const meta = await axios.post(tokenUri, undefined, {
+          headers: {
+            authorization: `basic ${Buffer.from(
+              `${IPFS_PROJECT_ID}:${IPFS_PROJECT_SECRET}`
+            ).toString('base64')}`,
+          },
+        })
 
         let senderPublicKey
         if (meta.data.senderPublicKey) {
